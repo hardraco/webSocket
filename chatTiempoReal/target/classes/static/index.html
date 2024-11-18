@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat en Tiempo Real</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+    <div id="chat-container">
+        <input type="text" id="username" placeholder="Introduce tu nombre" />
+        <div id="messages"></div>
+        <input type="text" id="message" placeholder="Escribe un mensaje" />
+        <button id="sendButton" onclick="sendMessage()">Enviar</button>
+    </div>
+
+    <script>
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('/chat');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Conectado: ' + frame);
+                stompClient.subscribe('/topic/public', function (message) {
+                    showMessage(JSON.parse(message.body));
+                });
+            });
+        }
+
+        function sendMessage() {
+            var messageContent = document.getElementById("message").value;
+            var username = document.getElementById("username").value;
+            if (messageContent && stompClient) {
+                var chatMessage = {
+                    sender: username,
+                    content: messageContent,
+                    type: 'CHAT'
+                };
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+                document.getElementById("message").value = '';
+            }
+        }
+
+        function showMessage(message) {
+            var messagesDiv = document.getElementById("messages");
+            var messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(message.sender === document.getElementById("username").value ? 'self' : 'other');
+            messageElement.textContent = message.sender + ": " + message.content;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        connect();
+    </script>
+</body>
+</html>
